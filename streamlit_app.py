@@ -13,8 +13,8 @@ def main():
     
     # File upload section
     uploaded_files = st.file_uploader(
-        "PDF, CSV, TXT files select करें",
-        type=['pdf', 'csv', 'txt'],
+        "CSV, TXT files select करें",
+        type=['csv', 'txt'],
         accept_multiple_files=True
     )
     
@@ -34,7 +34,17 @@ def main():
                             st.success("✅ CSV analysis completed!")
                             st.write(f"**Rows:** {len(df)}")
                             st.write(f"**Columns:** {len(df.columns)}")
+                            st.write("**Data Preview:**")
                             st.dataframe(df.head())
+                            
+                            # Download option
+                            csv_data = df.to_csv(index=False)
+                            st.download_button(
+                                label="📥 Download Processed CSV",
+                                data=csv_data,
+                                file_name=f"processed_{file.name}",
+                                mime="text/csv"
+                            )
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
                     
@@ -45,20 +55,28 @@ def main():
                             st.success("✅ Text analysis completed!")
                             st.write(f"**Characters:** {len(content)}")
                             st.write(f"**Words:** {len(content.split())}")
+                            st.write(f"**Lines:** {len(content.splitlines())}")
                             st.write(f"**Preview:** {content[:500]}...")
+                            
+                            # Download option
+                            st.download_button(
+                                label="📥 Download Text Content",
+                                data=content,
+                                file_name=f"content_{file.name}",
+                                mime="text/plain"
+                            )
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
-                    
-                    # PDF files (coming soon)
-                    elif file.type == "application/pdf":
-                        st.info("📝 PDF support coming in next update!")
-                    
-                    else:
-                        st.info("This file type will be supported soon!")
 
-    # URL section (coming soon)
+    # Coming soon features
     st.markdown("---")
-    st.info("🌐 **URL Scraping Feature** - Coming in the next update!")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.info("🌐 **URL Scraping** - Coming soon!")
+    
+    with col2:
+        st.info("📝 **PDF Support** - Coming soon!")
 
 if __name__ == "__main__":
     main()

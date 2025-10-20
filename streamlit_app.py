@@ -2,13 +2,16 @@ import streamlit as st
 import pandas as pd
 import requests
 import re
+import PyPDF2
+import docx
+import io
 
 # Mobile-friendly page config
 st.set_page_config(
-    page_title="Content Analyzer",
+    page_title="Content Analyzer Pro",
     page_icon="🔍",
     layout="wide",
-    initial_sidebar_state="collapsed"  # Mobile के लिए better
+    initial_sidebar_state="collapsed"
 )
 
 # Custom CSS for mobile optimization
@@ -45,6 +48,15 @@ st.markdown("""
         border-left: 4px solid #1f77b4;
         margin: 0.5rem 0;
     }
+    .file-type-badge {
+        background-color: #1f77b4;
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        display: inline-block;
+        margin: 0.2rem;
+    }
     .mobile-warning {
         background-color: #fff3cd;
         color: #856404;
@@ -60,9 +72,6 @@ st.markdown("""
         border-radius: 8px;
         border: 1px solid #c3e6cb;
     }
-    .tab-content {
-        padding: 0.5rem;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -70,7 +79,7 @@ def simple_scrape_website(url):
     """BeautifulSoup के बिना simple website scraping"""
     try:
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         response = requests.get(url, timeout=10)
         
@@ -84,8 +93,8 @@ def simple_scrape_website(url):
         
         return {
             'success': True,
-            'title': title[:50],  # Mobile के लिए short title
-            'content': clean_text[:2000],  # Mobile के लिए less content
+            'title': title[:50],
+            'content': clean_text[:2000],
             'url': url,
             'content_length': len(clean_text)
         }
@@ -96,10 +105,86 @@ def simple_scrape_website(url):
             'url': url
         }
 
+def extract_pdf_content(file):
+    """PDF file से content extract करें"""
+    try:
+        pdf_reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
+        
+        return {
+            'success': True,
+            'content': text,
+            'pages': len(pdf_reader.pages),
+            'characters': len(text),
+            'words': len(text.split())
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def extract_docx_content(file):
+    """DOCX file से content extract करें"""
+    try:
+        doc = docx.Document(file)
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        
+        return {
+            'success': True,
+            'content': text,
+            'paragraphs': len(doc.paragraphs),
+            'characters': len(text),
+            'words': len(text.split())
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def extract_csv_content(file):
+    """CSV file से data extract करें"""
+    try:
+        df = pd.read_csv(file)
+        return {
+            'success': True,
+            'dataframe': df,
+            'rows': len(df),
+            'columns': len(df.columns),
+            'column_names': list(df.columns)
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def extract_txt_content(file):
+    """TXT file से content extract करें"""
+    try:
+        content = file.read().decode("utf-8")
+        return {
+            'success': True,
+            'content': content,
+            'characters': len(content),
+            'words': len(content.split()),
+            'lines': len(content.splitlines())
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
 def main():
     # Main header
-    st.markdown('<h1 class="main-header">🔍 Content Analyzer</h1>', unsafe_allow_html=True)
-    st.markdown("**📱 Mobile & 💻 PC Friendly - URLs और Files Analyze करें**")
+    st.markdown('<h1 class="main-header">🔍 Content Analyzer Pro</h1>', unsafe_allow_html=True)
+    st.markdown("**📱 Mobile & 💻 PC Friendly - URLs, PDF, DOCX, CSV, TXT Analyze करें**")
     
     # Mobile warning
     st.markdown("""
@@ -110,50 +195,64 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Features grid - Mobile responsive
-    st.markdown("### 🚀 Features")
-    col1, col2, col3 = st.columns(3)
+    # Features grid - All file types
+    st.markdown("### 🚀 Supported Formats")
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
         st.markdown("""
-        <div class="feature-card">
-            <h4>🌐 URL Scraping</h4>
-            <p>Websites से content निकालें</p>
+        <div class="feature-card" style="text-align: center;">
+            <h4>🌐 URLs</h4>
+            <p>Web Scraping</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
-        <div class="feature-card">
-            <h4>📊 CSV Analysis</h4>
-            <p>Data preview और stats</p>
+        <div class="feature-card" style="text-align: center;">
+            <h4>📄 PDF</h4>
+            <p>Text Extraction</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
         st.markdown("""
-        <div class="feature-card">
-            <h4>📝 Text Analysis</h4>
-            <p>Word count और analysis</p>
+        <div class="feature-card" style="text-align: center;">
+            <h4>📝 DOCX</h4>
+            <p>Word Documents</p>
         </div>
         """, unsafe_allow_html=True)
     
-    # Tabs for different features - Mobile friendly
+    with col4:
+        st.markdown("""
+        <div class="feature-card" style="text-align: center;">
+            <h4>📊 CSV</h4>
+            <p>Data Analysis</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col5:
+        st.markdown("""
+        <div class="feature-card" style="text-align: center;">
+            <h4>📃 TXT</h4>
+            <p>Text Analysis</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Tabs for different features
     tab1, tab2 = st.tabs(["🌐 URL Scraping", "📁 File Analysis"])
     
     with tab1:
-        st.markdown('<div class="tab-content">', unsafe_allow_html=True)
         st.header("URLs से Content Scrape करें")
         
         # Mobile-friendly URL input
         url_input = st.text_area(
             "🌐 URLs डालें (एक line में एक URL)",
             placeholder="https://example.com\nhttps://example.org",
-            height=80,  # Mobile के लिए compact
+            height=80,
             help="एक बार में multiple URLs"
         )
         
-        # Mobile-friendly button
         col1, col2 = st.columns([3, 1])
         with col1:
             if st.button("🚀 Scrape URLs", type="primary", use_container_width=True):
@@ -171,11 +270,10 @@ def main():
                             if result['success']:
                                 with st.expander(f"✅ {result['title']}", expanded=False):
                                     st.write(f"**URL:** {result['url']}")
-                                    st.write(f"**Content:** {result['content_length']} chars")
+                                    st.write(f"**Content Length:** {result['content_length']} characters")
                                     st.text_area("Preview", result['content'][:300] + "...", 
                                                height=100, key=f"preview_{i}")
                                     
-                                    # Mobile-friendly download button
                                     st.download_button(
                                         label="📥 Download",
                                         data=result['content'],
@@ -185,7 +283,7 @@ def main():
                                         key=f"dl_{i}"
                                     )
                             else:
-                                st.error(f"❌ {url[:30]}...")
+                                st.error(f"❌ {url[:30]}... - {result['error']}")
                             
                             progress_bar.progress((i + 1) / len(urls))
                         
@@ -196,27 +294,27 @@ def main():
         with col2:
             if st.button("🔄 Clear", use_container_width=True):
                 st.rerun()
-        
-        st.markdown('</div>', unsafe_allow_html=True)
     
     with tab2:
-        st.markdown('<div class="tab-content">', unsafe_allow_html=True)
         st.header("Files Upload और Analyze करें")
         
-        # Mobile-friendly file uploader
+        # All file types uploader
         uploaded_files = st.file_uploader(
-            "📁 CSV or TXT files चुनें",
-            type=['csv', 'txt'],
+            "📁 Files चुनें (PDF, DOCX, CSV, TXT)",
+            type=['pdf', 'docx', 'csv', 'txt'],
             accept_multiple_files=True,
-            help="Mobile से cloud storage से files upload कर सकते हैं"
+            help="सभी format supported: PDF, Word, CSV, Text"
         )
         
         if uploaded_files:
             st.markdown(f'<div class="success-box">✅ {len(uploaded_files)} file(s) uploaded!</div>', unsafe_allow_html=True)
             
             for file in uploaded_files:
+                # File type badge
+                file_type_badge = f'<span class="file-type-badge">{file.type}</span>'
+                st.markdown(file_type_badge, unsafe_allow_html=True)
+                
                 with st.expander(f"📄 {file.name}", expanded=True):
-                    # Mobile-friendly columns
                     col1, col2 = st.columns([1, 2])
                     
                     with col1:
@@ -224,74 +322,107 @@ def main():
                         st.write(f"Type: {file.type}")
                         st.write(f"Size: {file.size / 1024:.1f} KB")
                         
-                        # Mobile-friendly analyze button
                         if st.button(f"Analyze {file.name}", key=file.name, use_container_width=True):
-                            # CSV File Analysis
-                            if file.type == "text/csv":
-                                try:
-                                    df = pd.read_csv(file)
+                            # PDF Files
+                            if file.type == "application/pdf":
+                                result = extract_pdf_content(file)
+                                if result['success']:
+                                    st.success("✅ PDF analysis completed!")
+                                    st.write(f"**Pages:** {result['pages']}")
+                                    st.write(f"**Characters:** {result['characters']}")
+                                    st.write(f"**Words:** {result['words']}")
                                     
-                                    st.success("✅ CSV analysis completed!")
-                                    st.write(f"**Rows:** {len(df)}")
-                                    st.write(f"**Columns:** {len(df.columns)}")
+                                    st.text_area("Content Preview", result['content'][:500] + "...", 
+                                               height=150, key=f"pdf_{file.name}")
                                     
-                                    # Mobile-friendly data preview
-                                    st.write("**Preview:**")
-                                    st.dataframe(df.head(5), use_container_width=True)
-                                    
-                                    # Download button
-                                    csv_data = df.to_csv(index=False)
                                     st.download_button(
-                                        label="📥 Download CSV",
+                                        label="📥 Download PDF Text",
+                                        data=result['content'],
+                                        file_name=f"{file.name}_extracted.txt",
+                                        mime="text/plain",
+                                        use_container_width=True
+                                    )
+                                else:
+                                    st.error(f"❌ PDF Error: {result['error']}")
+                            
+                            # DOCX Files
+                            elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                                result = extract_docx_content(file)
+                                if result['success']:
+                                    st.success("✅ DOCX analysis completed!")
+                                    st.write(f"**Paragraphs:** {result['paragraphs']}")
+                                    st.write(f"**Characters:** {result['characters']}")
+                                    st.write(f"**Words:** {result['words']}")
+                                    
+                                    st.text_area("Content Preview", result['content'][:500] + "...", 
+                                               height=150, key=f"docx_{file.name}")
+                                    
+                                    st.download_button(
+                                        label="📥 Download DOCX Text",
+                                        data=result['content'],
+                                        file_name=f"{file.name}_extracted.txt",
+                                        mime="text/plain",
+                                        use_container_width=True
+                                    )
+                                else:
+                                    st.error(f"❌ DOCX Error: {result['error']}")
+                            
+                            # CSV Files
+                            elif file.type == "text/csv":
+                                result = extract_csv_content(file)
+                                if result['success']:
+                                    st.success("✅ CSV analysis completed!")
+                                    st.write(f"**Rows:** {result['rows']}")
+                                    st.write(f"**Columns:** {result['columns']}")
+                                    st.write(f"**Columns:** {', '.join(result['column_names'])}")
+                                    
+                                    st.dataframe(result['dataframe'].head(8), use_container_width=True)
+                                    
+                                    csv_data = result['dataframe'].to_csv(index=False)
+                                    st.download_button(
+                                        label="📥 Download Processed CSV",
                                         data=csv_data,
                                         file_name=f"analyzed_{file.name}",
                                         mime="text/csv",
                                         use_container_width=True
                                     )
-                                    
-                                except Exception as e:
-                                    st.error(f"❌ Error: {str(e)}")
+                                else:
+                                    st.error(f"❌ CSV Error: {result['error']}")
                             
-                            # TXT File Analysis
+                            # TXT Files
                             elif file.type == "text/plain":
-                                try:
-                                    content = file.read().decode("utf-8")
-                                    
+                                result = extract_txt_content(file)
+                                if result['success']:
                                     st.success("✅ Text analysis completed!")
-                                    st.write(f"**Characters:** {len(content)}")
-                                    st.write(f"**Words:** {len(content.split())}")
-                                    st.write(f"**Lines:** {len(content.splitlines())}")
+                                    st.write(f"**Characters:** {result['characters']}")
+                                    st.write(f"**Words:** {result['words']}")
+                                    st.write(f"**Lines:** {result['lines']}")
                                     
-                                    # Mobile-friendly content preview
-                                    st.text_area("Content Preview", content[:500] + "..." if len(content) > 500 else content, 
-                                               height=150, key=f"content_{file.name}")
+                                    st.text_area("Content Preview", result['content'][:500] + "...", 
+                                               height=150, key=f"txt_{file.name}")
                                     
-                                    # Download button
                                     st.download_button(
                                         label="📥 Download Text",
-                                        data=content,
+                                        data=result['content'],
                                         file_name=f"analyzed_{file.name}",
                                         mime="text/plain",
                                         use_container_width=True
                                     )
-                                    
-                                except Exception as e:
-                                    st.error(f"❌ Error: {str(e)}")
+                                else:
+                                    st.error(f"❌ Text Error: {result['error']}")
                     
                     with col2:
                         st.info("ℹ️ Analyze बटन पर क्लिक करें")
         
         else:
-            st.info("👉 Files upload करने के लिए click करें")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.info("👉 PDF, DOCX, CSV, TXT files upload करने के लिए click करें")
     
     # Footer
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #666; font-size: 0.9rem;'>
-        <p>📱 <strong>Mobile & PC Compatible</strong> - हर device पर smoothly work करेगा</p>
-        <p>🔧 Built with Streamlit • Responsive Design</p>
+        <p>📱 <strong>Mobile & PC Compatible</strong> - All Formats Supported</p>
+        <p>🌐 URLs • 📄 PDF • 📝 DOCX • 📊 CSV • 📃 TXT</p>
     </div>
     """, unsafe_allow_html=True)
 

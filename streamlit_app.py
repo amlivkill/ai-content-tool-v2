@@ -1,82 +1,75 @@
 import streamlit as st
-import pandas as pd
-
-st.set_page_config(
-    page_title="File Content Analyzer", 
-    page_icon="📁",
-    layout="wide"
-)
 
 def main():
-    st.title("📁 File Content Analyzer")
-    st.markdown("**Files Upload करें और Analyze करें**")
+    st.title("🌐 URL & File Content Tool")
+    st.success("✅ App is working! Adding new features...")
     
-    # File upload section
-    uploaded_files = st.file_uploader(
-        "CSV, TXT files select करें",
-        type=['csv', 'txt'],
-        accept_multiple_files=True
-    )
+    # Tab 1: URL Input (Simple)
+    tab1, tab2 = st.tabs(["🌐 URLs", "📁 Files"])
     
-    if uploaded_files:
-        st.success(f"✅ {len(uploaded_files)} file(s) uploaded!")
+    with tab1:
+        st.header("URLs से Content लें")
+        url = st.text_input("Website URL डालें")
+        if url:
+            st.info(f"URL entered: {url}")
+            st.write("🔜 URL scraping feature coming soon!")
+            
+            # Simple URL display
+            if st.button("Show URL Info"):
+                st.write(f"**URL:** {url}")
+                st.write("**Status:** ✅ URL recorded successfully")
+                st.write("**Next Step:** Content scraping will be added in next update")
+    
+    with tab2:
+        st.header("Files Upload करें")
+        uploaded_file = st.file_uploader("TXT or CSV file choose करें", type=['txt', 'csv'])
         
-        for file in uploaded_files:
-            with st.expander(f"📄 {file.name}", expanded=True):
-                st.write(f"**File Type:** {file.type}")
-                st.write(f"**Size:** {file.size / 1024:.1f} KB")
+        if uploaded_file is not None:
+            st.success(f"✅ {uploaded_file.name} uploaded successfully!")
+            
+            # File info
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**Name:** {uploaded_file.name}")
+                st.write(f"**Type:** {uploaded_file.type}")
+            with col2:
+                st.write(f"**Size:** {uploaded_file.size} bytes")
+                st.write(f"**Size:** {uploaded_file.size / 1024:.1f} KB")
+            
+            # Simple content display for TXT files
+            if uploaded_file.type == "text/plain":
+                content = uploaded_file.read().decode("utf-8")
+                st.text_area("File Content:", content[:1000] + "..." if len(content) > 1000 else content, height=200)
+                st.write(f"**Total Characters:** {len(content)}")
+            
+            elif uploaded_file.type == "text/csv":
+                st.info("📊 CSV data analysis coming in next update!")
+                st.write("Currently we can only show file information")
                 
-                if st.button(f"Analyze {file.name}", key=file.name):
-                    # CSV files
-                    if file.type == "text/csv":
-                        try:
-                            df = pd.read_csv(file)
-                            st.success("✅ CSV analysis completed!")
-                            st.write(f"**Rows:** {len(df)}")
-                            st.write(f"**Columns:** {len(df.columns)}")
-                            st.write("**Data Preview:**")
-                            st.dataframe(df.head())
-                            
-                            # Download option
-                            csv_data = df.to_csv(index=False)
-                            st.download_button(
-                                label="📥 Download Processed CSV",
-                                data=csv_data,
-                                file_name=f"processed_{file.name}",
-                                mime="text/csv"
-                            )
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}")
-                    
-                    # TXT files
-                    elif file.type == "text/plain":
-                        try:
-                            content = file.read().decode("utf-8")
-                            st.success("✅ Text analysis completed!")
-                            st.write(f"**Characters:** {len(content)}")
-                            st.write(f"**Words:** {len(content.split())}")
-                            st.write(f"**Lines:** {len(content.splitlines())}")
-                            st.write(f"**Preview:** {content[:500]}...")
-                            
-                            # Download option
-                            st.download_button(
-                                label="📥 Download Text Content",
-                                data=content,
-                                file_name=f"content_{file.name}",
-                                mime="text/plain"
-                            )
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}")
+            # Download button
+            st.download_button(
+                label="📥 Download File Info",
+                data=f"File: {uploaded_file.name}\nSize: {uploaded_file.size} bytes\nType: {uploaded_file.type}",
+                file_name="file_info.txt",
+                mime="text/plain"
+            )
 
     # Coming soon features
     st.markdown("---")
-    col1, col2 = st.columns(2)
+    st.subheader("🚀 Coming Soon Features:")
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.info("🌐 **URL Scraping** - Coming soon!")
+        st.write("🌐 **URL Scraping**")
+        st.write("Auto content extraction")
     
     with col2:
-        st.info("📝 **PDF Support** - Coming soon!")
+        st.write("📊 **CSV Analysis**") 
+        st.write("Data preview & stats")
+    
+    with col3:
+        st.write("📝 **PDF Support**")
+        st.write("PDF text extraction")
 
 if __name__ == "__main__":
     main()

@@ -1,36 +1,28 @@
 import streamlit as st
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
-import io
+import re
 
-def scrape_website(url):
-    """Simple website content scraping"""
+def simple_scrape_website(url):
+    """BeautifulSoup के बिना simple website scraping"""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         response = requests.get(url, timeout=10)
-        soup = BeautifulSoup(response.content, 'html.parser')
         
-        # Remove scripts and styles
-        for script in soup(["script", "style"]):
-            script.decompose()
+        # Simple title extraction using regex
+        title_match = re.search(r'<title[^>]*>(.*?)</title>', response.text, re.IGNORECASE)
+        title = title_match.group(1).strip() if title_match else "No Title Found"
         
-        # Get title
-        title = soup.find('title')
-        title_text = title.text.strip() if title else "No Title Found"
-        
-        # Get main content
-        text = soup.get_text()
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        clean_text = ' '.join(chunk for chunk in chunks if chunk)
+        # Simple content extraction - remove HTML tags
+        clean_text = re.sub(r'<[^>]+>', ' ', response.text)
+        clean_text = re.sub(r'\s+', ' ', clean_text).strip()
         
         return {
             'success': True,
-            'title': title_text,
-            'content': clean_text[:5000],  # First 5000 characters
+            'title': title,
+            'content': clean_text[:3000],  # First 3000 characters
             'url': url,
             'content_length': len(clean_text)
         }
@@ -66,7 +58,7 @@ def main():
                 
                 for i, url in enumerate(urls):
                     status_text.text(f"Scraping: {url}")
-                    result = scrape_website(url)
+                    result = simple_scrape_website(url)
                     
                     if result['success']:
                         with st.expander(f"✅ {result['title']}", expanded=False):
@@ -89,6 +81,8 @@ def main():
                     progress_bar.progress((i + 1) / len(urls))
                 
                 status_text.text("✅ Scraping completed!")
+        else:
+            st.info("👉 URLs डालें और Scrape बटन पर क्लिक करें")
     
     with tab2:
         st.header("Files Upload और Analyze करें")
@@ -166,10 +160,8 @@ def main():
                             
                         except Exception as e:
                             st.error(f"❌ Error reading text file: {str(e)}")
-
-    # Coming soon features
-    st.markdown("---")
-    st.info("📝 **PDF Support** - Coming in next update! (PDF text extraction, multiple pages support)")
+        else:
+            st.info("👉 Files upload करें और analyze करें")
 
 if __name__ == "__main__":
     main()
